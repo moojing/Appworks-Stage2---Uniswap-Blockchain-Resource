@@ -2,6 +2,7 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
+import "forge-std/console2.sol";
 import { IUniswapV2Router01 } from "v2-periphery/interfaces/IUniswapV2Router01.sol";
 import { IUniswapV2Factory } from "v2-core/interfaces/IUniswapV2Factory.sol";
 import { IUniswapV2Pair } from "v2-core/interfaces/IUniswapV2Pair.sol";
@@ -45,18 +46,48 @@ contract UniswapV2PracticeTest is Test {
     // # Practice 1: maker add liquidity (100 ETH, 10000 USDC)
     function test_maker_addLiquidityETH() public {
         // Implement here
+        vm.startPrank(maker);
+        testUSDC.approve(address(UNISWAP_V2_ROUTER), 10000 * 10 ** testUSDC.decimals());
+        UNISWAP_V2_ROUTER.addLiquidityETH{ value: 100 ether }(
+            address(testUSDC),
+            10000 * 10 ** testUSDC.decimals(),
+            100, //  can be 0
+            1 ether, //  can be 0
+            maker,
+            block.timestamp + 100000
+        );
+        vm.stopPrank();
 
         // Checking
         IUniswapV2Pair wethUsdcPair = IUniswapV2Pair(UNISWAP_V2_FACTORY.getPair(address(WETH9), address(testUSDC)));
         (uint112 reserve0, uint112 reserve1, ) = wethUsdcPair.getReserves();
+        console2.log(reserve0);
+        console2.log(reserve1);
         assertEq(reserve0, 10000 * 10 ** testUSDC.decimals());
         assertEq(reserve1, 100 ether);
     }
 
     // # Practice 2: taker swap exact 100 ETH for testUSDC
     function test_taker_swapExactETHForTokens() public {
+        // add Liquidity
+        vm.startPrank(maker);
+        testUSDC.approve(address(UNISWAP_V2_ROUTER), 10000 * 10 ** testUSDC.decimals());
+        UNISWAP_V2_ROUTER.addLiquidityETH{ value: 100 ether }(
+            address(testUSDC),
+            10000 * 10 ** testUSDC.decimals(),
+            100, //  can be 0
+            1 ether, //  can be 0
+            maker,
+            block.timestamp + 100000
+        );
+        vm.stopPrank();
         // Impelement here
-
+        vm.startPrank(taker);
+        address[] memory path = new address[](2);
+        path[0] = address(WETH9);
+        path[1] = address(address(testUSDC));
+        UNISWAP_V2_ROUTER.swapExactETHForTokens{ value: 1 ether }(0, path, taker, block.timestamp + 100000);
+        vm.stopPrank();
         // Checking
         // # Disscussion 1: discuss why 4992488733 ?
         assertEq(testUSDC.balanceOf(taker), 4992488733);
