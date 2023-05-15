@@ -86,10 +86,13 @@ contract UniswapV2PracticeTest is Test {
         address[] memory path = new address[](2);
         path[0] = address(WETH9);
         path[1] = address(address(testUSDC));
-        UNISWAP_V2_ROUTER.swapExactETHForTokens{ value: 1 ether }(0, path, taker, block.timestamp + 100000);
+        UNISWAP_V2_ROUTER.swapExactETHForTokens{ value: 100 ether }(0, path, taker, block.timestamp + 100000);
         vm.stopPrank();
         // Checking
         // # Disscussion 1: discuss why 4992488733 ?
+        // initial  10000 * 100
+        // (100 + 100* 0.997) * 10000 - x' = 10000 * 100 =
+        // x' = 4,992.4887330996
         assertEq(testUSDC.balanceOf(taker), 4992488733);
         assertEq(taker.balance, 0);
     }
