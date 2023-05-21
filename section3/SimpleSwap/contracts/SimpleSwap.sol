@@ -92,9 +92,9 @@ contract SimpleSwap is ISimpleSwap, ERC20 {
         } else {
             uint optimalA = quote(amountBIn, reserveB, reserveA);
             uint optimalB = quote(amountAIn, reserveA, reserveB);
-            console2.log("opa", optimalA);
-            console2.log("opb", optimalB);
 
+            // 如果用 amountBIn 得出的 optimalA 比原來的 amountAin 還要小，表示 amountAIn 有多餘的值，應該使用 optimalA + amountBIn
+            // 反過來也是一樣
             if (amountAIn >= optimalA) {
                 (amountA, amountB) = (optimalA, amountBIn);
             } else if (amountBIn >= optimalB) {
@@ -143,6 +143,16 @@ contract SimpleSwap is ISimpleSwap, ERC20 {
 
         tokenA.transferFrom(address(this), msg.sender, amountA);
         tokenB.transferFrom(address(this), msg.sender, amountB);
+
+        balanceA = tokenA.balanceOf(address(this));
+        balanceB = tokenB.balanceOf(address(this));
+        _updateReserve(balanceA, balanceB);
+        emit RemoveLiquidity(address(msg.sender), amountA, amountB, liquidity);
+    }
+
+    function _updateReserve(uint256 balanceA, uint256 balanceB) internal {
+        _reserveA = balanceA;
+        _reserveB = balanceB;
     }
 
     /// @notice Get the reserves of the pool
