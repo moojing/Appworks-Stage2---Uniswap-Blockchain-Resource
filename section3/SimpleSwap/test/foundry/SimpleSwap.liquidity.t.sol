@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.17;
+pragma solidity >=0.8.17;
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { SimpleSwapSetUp } from "./helper/SimpleSwapSetUp.sol";
+import { console2 } from "forge-std/console2.sol";
 
 contract SimpleSwapAddLiquidityTest is SimpleSwapSetUp {
     function setUp() public override {
@@ -84,14 +85,22 @@ contract SimpleSwapAddLiquidityAfterInitial is SimpleSwapSetUp {
 
         uint256 makerBalanceABefore = tokenA.balanceOf(address(maker));
         uint256 makerBalanceBBefore = tokenB.balanceOf(address(maker));
+        console2.log("makerBalanceABefore", makerBalanceABefore);
+        console2.log("makerBalanceBBefore", makerBalanceBBefore);
         uint256 simpleSwapBalanceABefore = tokenA.balanceOf(address(simpleSwap));
         uint256 simpleSwapBalanceBBefore = tokenB.balanceOf(address(simpleSwap));
+        console2.log("simpleSwapBalanceABefore", simpleSwapBalanceABefore);
+        console2.log("simpleSwapBalanceBBefore", simpleSwapBalanceBBefore);
 
         vm.startPrank(maker);
         vm.expectEmit(true, true, true, true);
 
         emit AddLiquidity(maker, amountA, amountB, liquidity);
         simpleSwap.addLiquidity(amountA, amountB);
+        // console2.log("makerBalanceABefore", tokenA.balanceOf(address(maker)));
+        // console2.log("makerBalanceABefore", tokenB.balanceOf(address(maker)));
+        // console2.log("simpleSwapBalanceABefore", simpleSwapBalanceABefore);
+        // console2.log("simpleSwapBalanceBBefore", simpleSwapBalanceBBefore);
         assertEq(tokenA.balanceOf(address(maker)), makerBalanceABefore - amountA);
         assertEq(tokenB.balanceOf(address(maker)), makerBalanceBBefore - amountB);
         assertEq(tokenA.balanceOf(address(simpleSwap)), simpleSwapBalanceABefore + amountA);
@@ -99,7 +108,10 @@ contract SimpleSwapAddLiquidityAfterInitial is SimpleSwapSetUp {
 
         uint256 reserveA;
         uint256 reserveB;
+
         (reserveA, reserveB) = simpleSwap.getReserves();
+        console2.log("reverseA", reserveA);
+        console2.log("reverseB", reserveB);
         assertEq(reserveA, reserveAAfterFirstAddLiquidity + amountA);
         assertEq(reserveB, reserveBAfterFirstAddLiquidity + amountB);
         vm.stopPrank();
