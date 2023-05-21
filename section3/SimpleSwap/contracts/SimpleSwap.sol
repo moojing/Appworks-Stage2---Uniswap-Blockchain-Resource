@@ -16,9 +16,22 @@ contract SimpleSwap is ISimpleSwap, ERC20 {
 
     using Math for uint256;
 
-    constructor(address addressA, address addressB) ERC20("simpleSwapLiquidToken", "SLP") {
+    constructor(address tokenA, address tokenB) ERC20("simpleSwapLiquidToken", "SLP") {
+        require(isContract(tokenA), "SimpleSwap: TOKENA_IS_NOT_CONTRACT");
+        require(isContract(tokenB), "SimpleSwap: TOKENB_IS_NOT_CONTRACT");
+        require(tokenB != tokenA, "SimpleSwap: TOKENA_TOKENB_IDENTICAL_ADDRESS");
+
+        (address addressA, address addressB) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
         _tokenA = addressA;
         _tokenB = addressB;
+    }
+
+    function isContract(address addr) internal returns (bool) {
+        uint size;
+        assembly {
+            size := extcodesize(addr)
+        }
+        return size > 0;
     }
 
     function swap(address tokenIn, address tokenOut, uint256 amountIn) external returns (uint256 amountOut) {
@@ -62,6 +75,7 @@ contract SimpleSwap is ISimpleSwap, ERC20 {
         _reserveA = reserveA + amountAIn;
         _reserveB = reserveB + amountBIn;
 
+        _mint(msg.sender, liquidity);
         emit AddLiquidity(address(msg.sender), amountAIn, amountBIn, liquidity);
     }
 
@@ -69,7 +83,23 @@ contract SimpleSwap is ISimpleSwap, ERC20 {
     /// @param liquidity The amount of liquidity to remove
     /// @return amountA The amount of tokenA received
     /// @return amountB The amount of tokenB received
-    function removeLiquidity(uint256 liquidity) external returns (uint256 amountA, uint256 amountB) {}
+    function removeLiquidity(uint256 liquidity) external returns (uint256 amountA, uint256 amountB) {
+        if (liquidity == 0) revert("SimpleSwap: INSUFFICIENT_LIQUIDITY_BURNED");
+
+        uint _totalSupply = totalSupply();
+        IERC20 tokenA = IERC20(_tokenA);
+        IERC20 tokenB = IERC20(_tokenB);
+
+        uint balanceA = tokenA.balanceOf(msg.sender);
+        uint balanceB = tokenB.balanceOf(msg.sender);
+        amountA = SafeMath.mul(liquidity, balanceA) / _totalSupply; // using balances ensures pro-rata distribution
+        amountB = SafeMath.mul(liquidity, balanceB) / _totalSupply;
+
+        _burn(address(this), liquidity);
+
+        tokenA.transferFrom(address(this), msg.sender, amountA);
+        tokenB.transferFrom(address(this), msg.sender, amountB);
+    }
 
     /// @notice Get the reserves of the pool
     /// @return reserveA The reserve of tokenA
