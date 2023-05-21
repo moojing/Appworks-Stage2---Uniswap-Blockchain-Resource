@@ -6,6 +6,7 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import { console2 } from "forge-std/console2.sol";
 
 contract SimpleSwap is ISimpleSwap, ERC20 {
     // Implement core logic here
@@ -15,6 +16,7 @@ contract SimpleSwap is ISimpleSwap, ERC20 {
     address private _tokenB;
 
     using Math for uint256;
+    using SafeMath for uint256;
 
     constructor(address tokenA, address tokenB) ERC20("simpleSwapLiquidToken", "SLP") {
         require(isContract(tokenA), "SimpleSwap: TOKENA_IS_NOT_CONTRACT");
@@ -32,6 +34,12 @@ contract SimpleSwap is ISimpleSwap, ERC20 {
             size := extcodesize(addr)
         }
         return size > 0;
+    }
+
+    function quote(uint amount1, uint reserve1, uint reserve2) internal pure returns (uint amount2) {
+        require(amount1 > 0, "SimpleSwap: INSUFFICIENT_AMOUNT");
+        require(reserve1 > 0 && reserve2 > 0, "SimpleSwap: INSUFFICIENT_LIQUIDITY");
+        amount2 = amount1.mul(reserve2) / reserve1;
     }
 
     function swap(address tokenIn, address tokenOut, uint256 amountIn) external returns (uint256 amountOut) {
@@ -52,31 +60,46 @@ contract SimpleSwap is ISimpleSwap, ERC20 {
 
         (uint256 reserveA, uint256 reserveB) = getReserves();
         uint _totalSupply = totalSupply();
-        amountA = amountAIn;
-        amountB = amountBIn;
         IERC20 tokenA = IERC20(_tokenA);
         IERC20 tokenB = IERC20(_tokenB);
-
-        tokenA.transferFrom(msg.sender, address(this), amountA);
-        tokenB.transferFrom(msg.sender, address(this), amountB);
 
         // amountA = balance0.sub(_reserveA);
         // amountB = balance1.sub(_reserveB);
 
         if (_totalSupply == 0) {
+            tokenA.transferFrom(msg.sender, address(this), amountAIn);
+            tokenB.transferFrom(msg.sender, address(this), amountBIn);
+
             liquidity = Math.sqrt(SafeMath.mul(amountAIn, amountBIn));
+            (amountA, amountB) = (amountAIn, amountBIn);
         } else {
+            uint optimalA = quote(amountBIn, reserveB, reserveA);
+            uint optimalB = quote(amountAIn, reserveA, reserveB);
+            console2.log("opa", optimalA);
+            console2.log("opb", optimalB);
+
+            if (amountAIn >= optimalA) {
+                (amountA, amountB) = (optimalA, amountBIn);
+            } else if (amountBIn >= optimalB) {
+                (amountA, amountB) = (amountAIn, optimalB);
+            } else {
+                (amountA, amountB) = (amountAIn, amountBIn);
+            }
+
+            tokenA.transferFrom(msg.sender, address(this), amountA);
+            tokenB.transferFrom(msg.sender, address(this), amountB);
+
             liquidity = Math.min(
-                Math.mulDiv(amountAIn, _totalSupply, reserveA),
-                Math.mulDiv(amountBIn, _totalSupply, reserveB)
+                Math.mulDiv(amountA, _totalSupply, reserveA),
+                Math.mulDiv(amountB, _totalSupply, reserveB)
             );
         }
 
-        _reserveA = reserveA + amountAIn;
-        _reserveB = reserveB + amountBIn;
+        _reserveA = reserveA + amountA;
+        _reserveB = reserveB + amountB;
 
         _mint(msg.sender, liquidity);
-        emit AddLiquidity(address(msg.sender), amountAIn, amountBIn, liquidity);
+        emit AddLiquidity(address(msg.sender), amountA, amountB, liquidity);
     }
 
     /// @notice Remove liquidity from the pool

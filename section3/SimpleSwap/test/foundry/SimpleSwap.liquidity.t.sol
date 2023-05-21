@@ -85,12 +85,8 @@ contract SimpleSwapAddLiquidityAfterInitial is SimpleSwapSetUp {
 
         uint256 makerBalanceABefore = tokenA.balanceOf(address(maker));
         uint256 makerBalanceBBefore = tokenB.balanceOf(address(maker));
-        console2.log("makerBalanceABefore", makerBalanceABefore);
-        console2.log("makerBalanceBBefore", makerBalanceBBefore);
         uint256 simpleSwapBalanceABefore = tokenA.balanceOf(address(simpleSwap));
         uint256 simpleSwapBalanceBBefore = tokenB.balanceOf(address(simpleSwap));
-        console2.log("simpleSwapBalanceABefore", simpleSwapBalanceABefore);
-        console2.log("simpleSwapBalanceBBefore", simpleSwapBalanceBBefore);
 
         vm.startPrank(maker);
         vm.expectEmit(true, true, true, true);
@@ -106,8 +102,6 @@ contract SimpleSwapAddLiquidityAfterInitial is SimpleSwapSetUp {
         uint256 reserveB;
 
         (reserveA, reserveB) = simpleSwap.getReserves();
-        console2.log("reverseA", reserveA);
-        console2.log("reverseB", reserveB);
         assertEq(reserveA, reserveAAfterFirstAddLiquidity + amountA);
         assertEq(reserveB, reserveBAfterFirstAddLiquidity + amountB);
         vm.stopPrank();
@@ -153,8 +147,16 @@ contract SimpleSwapAddLiquidityAfterInitial is SimpleSwapSetUp {
         uint256 simpleSwapBalanceABefore = tokenA.balanceOf(address(simpleSwap));
         uint256 simpleSwapBalanceBBefore = tokenB.balanceOf(address(simpleSwap));
 
+        console2.log("makerBalanceABefore", makerBalanceABefore);
+        console2.log("makerBalanceBBefore", makerBalanceBBefore);
+        console2.log("simpleSwapBalanceABefore", simpleSwapBalanceABefore);
+        console2.log("simpleSwapBalanceBBefore", simpleSwapBalanceBBefore);
+
         vm.startPrank(maker);
         vm.expectEmit(true, true, true, true);
+
+        console2.log("aA", amountA);
+        console2.log("aB", amountB);
 
         emit AddLiquidity(maker, actualAmountA, amountB, liquidity);
         simpleSwap.addLiquidity(amountA, amountB);
