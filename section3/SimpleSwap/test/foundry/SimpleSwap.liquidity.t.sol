@@ -147,16 +147,8 @@ contract SimpleSwapAddLiquidityAfterInitial is SimpleSwapSetUp {
         uint256 simpleSwapBalanceABefore = tokenA.balanceOf(address(simpleSwap));
         uint256 simpleSwapBalanceBBefore = tokenB.balanceOf(address(simpleSwap));
 
-        console2.log("makerBalanceABefore", makerBalanceABefore);
-        console2.log("makerBalanceBBefore", makerBalanceBBefore);
-        console2.log("simpleSwapBalanceABefore", simpleSwapBalanceABefore);
-        console2.log("simpleSwapBalanceBBefore", simpleSwapBalanceBBefore);
-
         vm.startPrank(maker);
         vm.expectEmit(true, true, true, true);
-
-        console2.log("aA", amountA);
-        console2.log("aB", amountB);
 
         emit AddLiquidity(maker, actualAmountA, amountB, liquidity);
         simpleSwap.addLiquidity(amountA, amountB);

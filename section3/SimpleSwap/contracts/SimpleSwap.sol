@@ -42,8 +42,23 @@ contract SimpleSwap is ISimpleSwap, ERC20 {
         amount2 = amount1.mul(reserve2) / reserve1;
     }
 
+    function getAmountOut(uint amountIn, uint reserveIn, uint reserveOut) internal pure returns (uint amountOut) {
+        //  BOut = reserveB - ((reserveA * reserveB - 1) / (reserveA + AIn) + 1)
+        // use reserveA as reserveIn and reserveB as reserveOut
+        uint numerator = reserveIn.mul(reserveOut) - 1;
+        uint denominator = reserveIn + amountIn + 1;
+        amountOut = reserveOut - numerator / denominator;
+    }
+
     function swap(address tokenIn, address tokenOut, uint256 amountIn) external returns (uint256 amountOut) {
-        return 0;
+        require(amountIn > 0, "SimpleSwap: INSUFFICIENT_INPUT_AMOUNT");
+        require(tokenIn == _tokenA || tokenIn == _tokenB, "SimpleSwap: INVALID_TOKEN_IN");
+        require(tokenOut == _tokenA || tokenOut == _tokenB, "SimpleSwap: INVALID_TOKEN_OUT");
+        require(tokenIn != tokenOut, "SimpleSwap: IDENTICAL_ADDRESS");
+
+        (uint256 reserveIn, uint256 reserveOut) = tokenIn == _tokenA ? (_reserveA, _reserveB) : (_reserveB, _reserveA);
+        amountOut = getAmountOut(amountIn, reserveIn, reserveOut);
+        IERC20(tokenOut).transferFrom(address(this), msg.sender, amountOut);
     }
 
     /// @notice Add liquidity to the pool
@@ -113,13 +128,15 @@ contract SimpleSwap is ISimpleSwap, ERC20 {
         IERC20 tokenA = IERC20(_tokenA);
         IERC20 tokenB = IERC20(_tokenB);
 
-        uint balanceA = tokenA.balanceOf(msg.sender);
-        uint balanceB = tokenB.balanceOf(msg.sender);
+        uint balanceA = tokenA.balanceOf(address(this));
+        uint balanceB = tokenB.balanceOf(address(this));
         amountA = SafeMath.mul(liquidity, balanceA) / _totalSupply; // using balances ensures pro-rata distribution
         amountB = SafeMath.mul(liquidity, balanceB) / _totalSupply;
 
-        _burn(address(this), liquidity);
+        _burn(msg.sender, liquidity);
 
+        tokenA.approve(address(this), amountA);
+        tokenB.approve(address(this), amountB);
         tokenA.transferFrom(address(this), msg.sender, amountA);
         tokenB.transferFrom(address(this), msg.sender, amountB);
     }
