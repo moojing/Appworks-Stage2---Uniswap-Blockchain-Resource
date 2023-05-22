@@ -43,10 +43,18 @@ contract SimpleSwap is ISimpleSwap, ERC20 {
     }
 
     function getAmountOut(uint amountIn, uint reserveIn, uint reserveOut) internal pure returns (uint amountOut) {
-        //  BOut = reserveB - ((reserveA * reserveB - 1) / (reserveA + AIn) + 1) --> this method will have some error
+        /*
+           BOut = reserveB - ((reserveA * reserveB - 1) / (reserveA + AIn) + 1) 
+            --> this method will have some error，有一點誤差
+            bill : "其實就是在做 ceil((reserveA * reserveB) / (reserveA + AIn))
+            假設原本是整除，那 -1 之後會讓它答案小 1，再 +1 後就變回原本的值
+            假設原本不整除，那 -1 不會對值造成影響，再 +1 後就變回比原本大 1 的值"*/
+
+        //uniswap 的公式，但是還是不知道如何推出來的
         amountOut = (reserveOut * amountIn) / (reserveIn + amountIn);
     }
 
+    // Q: 沒有確認 k 值，但是測試還是會過，這是正常的嗎？
     function swap(address tokenIn, address tokenOut, uint256 amountIn) external returns (uint256 amountOut) {
         require(amountIn > 0, "SimpleSwap: INSUFFICIENT_INPUT_AMOUNT");
         require(tokenIn == _tokenA || tokenIn == _tokenB, "SimpleSwap: INVALID_TOKEN_IN");
@@ -58,8 +66,10 @@ contract SimpleSwap is ISimpleSwap, ERC20 {
         amountOut = getAmountOut(amountIn, reserveIn, reserveOut);
 
         IERC20(tokenOut).approve(address(this), amountOut);
+        // 合約只要 approve amountOut ，approve amountIn 是 user 的事情
         IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
         IERC20(tokenOut).transferFrom(address(this), msg.sender, amountOut);
+
         _updateReserve();
         emit Swap(msg.sender, tokenIn, tokenOut, amountIn, amountOut);
     }
@@ -78,11 +88,9 @@ contract SimpleSwap is ISimpleSwap, ERC20 {
 
         (uint256 reserveA, uint256 reserveB) = getReserves();
         uint _totalSupply = totalSupply();
+
         IERC20 tokenA = IERC20(_tokenA);
         IERC20 tokenB = IERC20(_tokenB);
-
-        // amountA = balance0.sub(_reserveA);
-        // amountB = balance1.sub(_reserveB);
 
         if (_totalSupply == 0) {
             tokenA.transferFrom(msg.sender, address(this), amountAIn);
@@ -107,12 +115,14 @@ contract SimpleSwap is ISimpleSwap, ERC20 {
             tokenA.transferFrom(msg.sender, address(this), amountA);
             tokenB.transferFrom(msg.sender, address(this), amountB);
 
+            // 依照比例算出 user 應得的 liquidity，看那個token 算出來的比例比較小（確保 k值不會變小）
             liquidity = Math.min(
                 Math.mulDiv(amountA, _totalSupply, reserveA),
                 Math.mulDiv(amountB, _totalSupply, reserveB)
             );
         }
 
+        // 加完 liquidity 之後記得更新 reserve !
         _reserveA = reserveA + amountA;
         _reserveB = reserveB + amountB;
 
@@ -133,6 +143,7 @@ contract SimpleSwap is ISimpleSwap, ERC20 {
 
         uint balanceA = tokenA.balanceOf(address(this));
         uint balanceB = tokenB.balanceOf(address(this));
+        // 依照 liquidity 的比例，從合約中轉出 tokenA, tokenB
         amountA = SafeMath.mul(liquidity, balanceA) / _totalSupply; // using balances ensures pro-rata distribution
         amountB = SafeMath.mul(liquidity, balanceB) / _totalSupply;
 
