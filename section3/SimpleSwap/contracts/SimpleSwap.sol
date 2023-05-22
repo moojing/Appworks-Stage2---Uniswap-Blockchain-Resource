@@ -56,11 +56,12 @@ contract SimpleSwap is ISimpleSwap, ERC20 {
         (uint256 reserveIn, uint256 reserveOut) = tokenIn == _tokenA ? (_reserveA, _reserveB) : (_reserveB, _reserveA);
 
         amountOut = getAmountOut(amountIn, reserveIn, reserveOut);
-        emit Swap(msg.sender, tokenIn, tokenOut, amountIn, amountOut);
 
         IERC20(tokenOut).approve(address(this), amountOut);
         IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
         IERC20(tokenOut).transferFrom(address(this), msg.sender, amountOut);
+        _updateReserve();
+        emit Swap(msg.sender, tokenIn, tokenOut, amountIn, amountOut);
     }
 
     /// @notice Add liquidity to the pool
@@ -144,13 +145,13 @@ contract SimpleSwap is ISimpleSwap, ERC20 {
         tokenA.transferFrom(address(this), msg.sender, amountA);
         tokenB.transferFrom(address(this), msg.sender, amountB);
 
-        balanceA = tokenA.balanceOf(address(this));
-        balanceB = tokenB.balanceOf(address(this));
-        _updateReserve(balanceA, balanceB);
+        _updateReserve();
         emit RemoveLiquidity(address(msg.sender), amountA, amountB, liquidity);
     }
 
-    function _updateReserve(uint256 balanceA, uint256 balanceB) internal {
+    function _updateReserve() internal {
+        uint balanceA = IERC20(_tokenA).balanceOf(address(this));
+        uint balanceB = IERC20(_tokenB).balanceOf(address(this));
         _reserveA = balanceA;
         _reserveB = balanceB;
     }

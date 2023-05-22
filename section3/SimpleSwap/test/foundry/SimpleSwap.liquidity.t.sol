@@ -260,9 +260,9 @@ contract SimpleSwapRemoveLiquidity is SimpleSwapSetUp {
         uint256 reserveB;
         (reserveA, reserveB) = simpleSwap.getReserves();
         uint256 totalSupply = simpleSwap.totalSupply();
+
         uint256 amountA = (lpTokenAmount * reserveA) / totalSupply;
         uint256 amountB = (lpTokenAmount * reserveB) / totalSupply;
-
         uint256 makerBalanceABefore = tokenA.balanceOf(address(maker));
         uint256 makerBalanceBBefore = tokenB.balanceOf(address(maker));
         uint256 simpleSwapBalanceABefore = tokenA.balanceOf(address(simpleSwap));
