@@ -9,6 +9,7 @@ import { IUniswapV2Factory } from "v2-core/interfaces/IUniswapV2Factory.sol";
 import { IUniswapV2Router01 } from "v2-periphery/interfaces/IUniswapV2Router01.sol";
 import { IWETH } from "v2-periphery/interfaces/IWETH.sol";
 import { IFakeLendingProtocol } from "./interfaces/IFakeLendingProtocol.sol";
+import "forge-std/console.sol";
 
 // This is liquidator contrac for testing,
 // all you need to implement is flash swap from uniswap pool and call lending protocol liquidate function in uniswapV2Call
@@ -54,11 +55,18 @@ contract Liquidator is IUniswapV2Callee, Ownable {
     function uniswapV2Call(address sender, uint256 amount0, uint256 amount1, bytes calldata data) external override {
         require(sender == address(this), "Sender must be this contract");
         require(amount0 > 0 || amount1 > 0, "amount0 or amount1 must be greater than 0");
-
         // 4. decode callback data
+        CallbackData memory callbackData = abi.decode(data, (CallbackData));
+        console.log("amountIn", callbackData.amountIn);
         // 5. call liquidate
+        IERC20(callbackData.tokenIn).approve(_FAKE_LENDING_PROTOCOL, callbackData.amountIn);
+        IFakeLendingProtocol(_FAKE_LENDING_PROTOCOL).liquidatePosition();
+        console.log("balance", address(this).balance);
+
         // 6. deposit ETH to WETH9, because we will get ETH from lending protocol
+        IWETH(_WETH9).deposit{ value: callbackData.amountOut }();
         // 7. repay WETH to uniswap pool
+        require(IERC20(callbackData.tokenOut).transfer(msg.sender, callbackData.amountOut), "Transfer failed");
 
         // check profit
         require(address(this).balance >= _MINIMUM_PROFIT, "Profit must be greater than 0.01 ether");
@@ -68,8 +76,19 @@ contract Liquidator is IUniswapV2Callee, Ownable {
     function liquidate(address[] calldata path, uint256 amountOut) external {
         require(amountOut > 0, "AmountOut must be greater than 0");
         // 1. get uniswap pool address
+        address pool = IUniswapV2Factory(_UNISWAP_FACTORY).getPair(path[0], path[1]);
         // 2. calculate repay amount
+        uint256 amountToPayback = IUniswapV2Router01(_UNISWAP_ROUTER).getAmountsIn(amountOut, path)[0];
         // 3. flash swap from uniswap pool
+
+        IUniswapV2Pair(pool).swap(
+            0,
+            amountOut,
+            address(this),
+            abi.encode(
+                CallbackData({ tokenIn: path[1], tokenOut: path[0], amountIn: amountOut, amountOut: amountToPayback })
+            )
+        );
     }
 
     receive() external payable {}
