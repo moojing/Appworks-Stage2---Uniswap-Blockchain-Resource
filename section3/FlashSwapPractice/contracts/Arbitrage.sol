@@ -5,7 +5,6 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IUniswapV2Pair } from "v2-core/interfaces/IUniswapV2Pair.sol";
 import { IUniswapV2Callee } from "v2-core/interfaces/IUniswapV2Callee.sol";
-
 // This is a pracitce contract for flash swap arbitrage
 contract Arbitrage is IUniswapV2Callee, Ownable {
     struct CallbackData {
@@ -56,9 +55,25 @@ contract Arbitrage is IUniswapV2Callee, Ownable {
     function arbitrage(address priceLowerPool, address priceHigherPool, uint256 borrowETH) external {
         // 1. finish callbackData
         // 2. flash swap (borrow WETH from lower price pool)
-
+        CallbackData memory callbackData;
+        callbackData.borrowToken = IUniswapV2Pair(priceLowerPool).token0();
+        callbackData.debtToken = IUniswapV2Pair(priceLowerPool).token1();
+        callbackData.borrowPool = priceLowerPool;
+        callbackData.targetSwapPool = priceHigherPool;
+        callbackData.borrowAmount = borrowETH;
+        callbackData.debtAmountOut = _getAmountOut(
+            borrowETH, 
+            IERC20(callbackData.debtToken).balanceOf(priceLowerPool),
+            IERC20(callbackData.borrowToken).balanceOf(priceLowerPool), 
+        );
+        callbackData.debtAmount = _getAmountIn(
+            borrowETH, 
+            IERC20(callbackData.debtToken).balanceOf(priceHigherPool),
+            IERC20(callbackData.borrowToken).balanceOf(priceHigherPool)
+        );
+        
         // Uncomment next line when you do the homework
-        // IUniswapV2Pair(priceLowerPool).swap(borrowETH, 0, address(this), abi.encode(callbackData));
+        IUniswapV2Pair(priceLowerPool).swap(borrowETH, 0, address(this), abi.encode(callbackData));
     }
 
     //
