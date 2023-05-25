@@ -39,8 +39,12 @@ contract Arbitrage is IUniswapV2Callee, Ownable {
         require(amount0 > 0 || amount1 > 0, "amount0 or amount1 must be greater than 0");
 
         // 3. decode callback data
+        CallbackData memory callbackData = abi.decode(data, (CallbackData));
         // 4. swap WETH to USDC
+        IERC20( callbackData.borrowToken ).transfer( callbackData.targetSwapPool, callbackData.borrowAmount );
+        IUniswapV2Pair(callbackData.targetSwapPool).swap( 0,callbackData.debtAmountOut , address(this), "");
         // 5. repay USDC to lower price pool
+        IERC20(callbackData.debtToken).transfer(callbackData.borrowPool, callbackData.debtAmount);
     }
 
     // Method 1 is
@@ -61,15 +65,17 @@ contract Arbitrage is IUniswapV2Callee, Ownable {
         callbackData.borrowPool = priceLowerPool;
         callbackData.targetSwapPool = priceHigherPool;
         callbackData.borrowAmount = borrowETH;
-        callbackData.debtAmountOut = _getAmountOut(
-            borrowETH, 
-            IERC20(callbackData.debtToken).balanceOf(priceLowerPool),
-            IERC20(callbackData.borrowToken).balanceOf(priceLowerPool), 
-        );
+        // 因為是計算 ETH 借出後，需要多少 usdc 進去才能維持 k 值，所以記得要用 getAmountIn
         callbackData.debtAmount = _getAmountIn(
             borrowETH, 
-            IERC20(callbackData.debtToken).balanceOf(priceHigherPool),
-            IERC20(callbackData.borrowToken).balanceOf(priceHigherPool)
+            IERC20(callbackData.debtToken).balanceOf(priceLowerPool),
+            IERC20(callbackData.borrowToken).balanceOf(priceLowerPool)
+        );
+        // 這邊的 debtAmountOut 則是用來表示把借出來的 ETH 丟給 higher pool 之後，可以換到多少的 usdc ，所以用 getAmountOut
+        callbackData.debtAmountOut = _getAmountOut(
+            borrowETH, 
+            IERC20(callbackData.borrowToken).balanceOf(priceHigherPool),
+            IERC20(callbackData.debtToken).balanceOf(priceHigherPool)
         );
         
         // Uncomment next line when you do the homework
