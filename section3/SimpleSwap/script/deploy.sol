@@ -2,14 +2,16 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Script.sol";
-import "../src/NFT.sol";
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "../contracts/SimpleSwap.sol";
 
 contract MyScript is Script {
     function run() external {
-        uint256 deployerPrivateKey = vm.envUint("0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80");
+        uint256 deployerPrivateKey = vm.envUint("SCRIPT_PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
-
-        NFT nft = new NFT("NFT_tutorial", "TUT", "baseUri");
+        ERC20 token1 = new ERC20("Token1", "TK1");
+        ERC20 token2 = new ERC20("Token2", "TK2");
+        SimpleSwap swap = new SimpleSwap(address(token1), address(token2));
 
         vm.stopBroadcast();
     }
