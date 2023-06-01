@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.17;
+pragma solidity >=0.8.17;
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { SimpleSwapSetUp } from "./helper/SimpleSwapSetUp.sol";
+import { console2 } from "forge-std/console2.sol";
 
 contract SimpleSwapAddLiquidityTest is SimpleSwapSetUp {
     function setUp() public override {
@@ -99,6 +100,7 @@ contract SimpleSwapAddLiquidityAfterInitial is SimpleSwapSetUp {
 
         uint256 reserveA;
         uint256 reserveB;
+
         (reserveA, reserveB) = simpleSwap.getReserves();
         assertEq(reserveA, reserveAAfterFirstAddLiquidity + amountA);
         assertEq(reserveB, reserveBAfterFirstAddLiquidity + amountB);
@@ -258,9 +260,9 @@ contract SimpleSwapRemoveLiquidity is SimpleSwapSetUp {
         uint256 reserveB;
         (reserveA, reserveB) = simpleSwap.getReserves();
         uint256 totalSupply = simpleSwap.totalSupply();
+
         uint256 amountA = (lpTokenAmount * reserveA) / totalSupply;
         uint256 amountB = (lpTokenAmount * reserveB) / totalSupply;
-
         uint256 makerBalanceABefore = tokenA.balanceOf(address(maker));
         uint256 makerBalanceBBefore = tokenB.balanceOf(address(maker));
         uint256 simpleSwapBalanceABefore = tokenA.balanceOf(address(simpleSwap));
