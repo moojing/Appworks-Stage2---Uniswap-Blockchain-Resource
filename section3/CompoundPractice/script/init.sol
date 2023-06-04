@@ -9,11 +9,16 @@ import { Comptroller } from "compound-protocol/contracts/Comptroller.sol";
 import { WhitePaperInterestRateModel } from "compound-protocol/contracts/WhitePaperInterestRateModel.sol";
 import { CErc20Delegate } from "compound-protocol/contracts/CErc20Delegate.sol";
 import { CErc20Delegator } from "compound-protocol/contracts/CErc20Delegator.sol";
+import { Unitroller } from "compound-protocol/contracts/Unitroller.sol";
+import { SimplePriceOracle } from "compound-protocol/contracts/SimplePriceOracle.sol";
+import { Comp } from "compound-protocol/contracts/Governance/Comp.sol";
+
 
 contract MyScript is Script {
     function run() external {
         // deploy underlying token 
         // deploy CErc20Delegate
+        CErc20Delegate cErc20delegate = new CErc20Delegate();
         // datectory deploy CErc20Delegator
 
         uint256 deployerPrivateKey = vm.envUint("SCRIPT_PRIVATE_KEY");
@@ -22,30 +27,41 @@ contract MyScript is Script {
         vm.startBroadcast(deployerPrivateKey);
         Comptroller comptroller = new Comptroller();
         WhitePaperInterestRateModel rateModel = new WhitePaperInterestRateModel(0,0);
-
         // deply CErc20Delegator 
-            // constructor(address underlying_,
-            //     ComptrollerInterface comptroller_,
-            //     InterestRateModel interestRateModel_,
-            //     uint initialExchangeRateMantissa_,
-            //     string memory name_,
-            //     string memory symbol_,
-            //     uint8 decimals_,
-            //     address payable admin_,
-            //     address implementation_,
-            //     bytes memory becomeImplementationData) {
+        //(    address underlying_,
+        //     ComptrollerInterface comptroller_,
+        //     InterestRateModel interestRateModel_,
+        //     uint initialExchangeRateMantissa_,
+        //     string memory name_,
+        //     string memory symbol_,
+        //     uint8 decimals_,
+        //     address payable admin_,
+        //     address implementation_ ) 
         CErc20Delegator delegator = new CErc20Delegator(
             address(underlyingToken),
             comptroller,
             rateModel,
-            0,
+            1,
             "cToken",
             "cToken",
             18,
             payable(address(this)),
-            address(0),
-            ""
+            address(cErc20delegate),
+            "0x0"
         );
+        // deploy unitroller and add configuration
+        SimplePriceOracle simpleOracle = new SimplePriceOracle(); 
+        Comp comp = new Comp(address(this));
+
+        Unitroller unitroller = new Unitroller();
+        unitroller._setPendingImplementation(address(comptroller));
+        comptroller._become(unitroller);
+
+        Comptroller(address(unitroller))._setLiquidationIncentive(1e18);
+        Comptroller(address(unitroller))._setCloseFactor(.051 * 1e18);
+        Comptroller(address(unitroller))._setPriceOracle(simpleOracle);
+        Comptroller(address(unitroller))._setPriceOracle(simpleOracle);
+
         vm.stopBroadcast();
     }
 }
