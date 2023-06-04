@@ -15,18 +15,15 @@ import { Comp } from "compound-protocol/contracts/Governance/Comp.sol";
 
 
 contract MyScript is Script {
-    function run() external {
+    Comptroller comptroller;
+    
+    function deployComptroller() public {
         // deploy underlying token 
         // deploy CErc20Delegate
-        CErc20Delegate cErc20delegate = new CErc20Delegate();
         // datectory deploy CErc20Delegator
-
-        uint256 deployerPrivateKey = vm.envUint("SCRIPT_PRIVATE_KEY");
         ERC20 underlyingToken = new ERC20("underLying token", "UDT");
-
-        vm.startBroadcast(deployerPrivateKey);
-        Comptroller comptroller = new Comptroller();
         WhitePaperInterestRateModel rateModel = new WhitePaperInterestRateModel(0,0);
+        CErc20Delegate cErc20delegate = new CErc20Delegate();
         // deply CErc20Delegator 
         //(    address underlying_,
         //     ComptrollerInterface comptroller_,
@@ -49,7 +46,10 @@ contract MyScript is Script {
             address(cErc20delegate),
             "0x0"
         );
-        // deploy unitroller and add configuration
+    }
+
+    function deployUnitroller() public {
+                // deploy unitroller and add configuration
         SimplePriceOracle simpleOracle = new SimplePriceOracle(); 
         Comp comp = new Comp(address(this));
 
@@ -61,6 +61,16 @@ contract MyScript is Script {
         Comptroller(address(unitroller))._setCloseFactor(.051 * 1e18);
         Comptroller(address(unitroller))._setPriceOracle(simpleOracle);
         Comptroller(address(unitroller))._setPriceOracle(simpleOracle);
+    }
+
+    function run() external {
+
+        uint256 deployerPrivateKey = vm.envUint("SCRIPT_PRIVATE_KEY");
+        vm.startBroadcast(deployerPrivateKey);
+
+        comptroller = new Comptroller();
+        deployComptroller();
+        deployUnitroller();
 
         vm.stopBroadcast();
     }
