@@ -13,17 +13,27 @@ import { Unitroller } from "compound-protocol/contracts/Unitroller.sol";
 import { SimplePriceOracle } from "compound-protocol/contracts/SimplePriceOracle.sol";
 import { Comp } from "compound-protocol/contracts/Governance/Comp.sol";
 
+contract UnderlyingToken is ERC20 {
+    constructor(string memory name_, string memory symbol_) ERC20(name_, symbol_) {}
+    
+    function mint(uint256 amount) public {
+        _mint(msg.sender, amount);
+    }
+}
 
 contract MyScript is Script {
     Comptroller comptroller;
-    
+    CErc20Delegator delegator;
+    CErc20Delegate cErc20delegate;
+    UnderlyingToken underlyingToken;
+
     function deployComptroller() public {
         // deploy underlying token 
         // deploy CErc20Delegate
         // datectory deploy CErc20Delegator
-        ERC20 underlyingToken = new ERC20("underLying token", "UDT");
+        underlyingToken = new UnderlyingToken("underLying token", "UDT");
         WhitePaperInterestRateModel rateModel = new WhitePaperInterestRateModel(0,0);
-        CErc20Delegate cErc20delegate = new CErc20Delegate();
+        cErc20delegate = new CErc20Delegate();
         // deply CErc20Delegator 
         //(    address underlying_,
         //     ComptrollerInterface comptroller_,
@@ -34,7 +44,7 @@ contract MyScript is Script {
         //     uint8 decimals_,
         //     address payable admin_,
         //     address implementation_ ) 
-        CErc20Delegator delegator = new CErc20Delegator(
+        delegator = new CErc20Delegator(
             address(underlyingToken),
             comptroller,
             rateModel,
@@ -63,7 +73,7 @@ contract MyScript is Script {
         Comptroller(address(unitroller))._setPriceOracle(simpleOracle);
     }
 
-    function run() external {
+    function run() public {
 
         uint256 deployerPrivateKey = vm.envUint("SCRIPT_PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
