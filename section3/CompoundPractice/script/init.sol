@@ -63,7 +63,7 @@ contract MyScript is Script {
         Comptroller(address(unitroller))._setPriceOracle(simpleOracle);
     }
 
-    function run() external {
+    function run() public {
 
         uint256 deployerPrivateKey = vm.envUint("SCRIPT_PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
