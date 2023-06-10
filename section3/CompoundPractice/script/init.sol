@@ -120,14 +120,14 @@ contract MyScript is Script {
         uniTrollerProxy._setLiquidationIncentive(1e18);
         uniTrollerProxy._supportMarket(CToken(address(cErc20DelegatorA)));
         uniTrollerProxy._supportMarket(CToken(address(cErc20DelegatorB)));
-        uniTrollerProxy._setCloseFactor(.051 * 1e18);
+        uniTrollerProxy._setCloseFactor(.5 * 1e18);
         uniTrollerProxy._setCollateralFactor(CToken(address(cErc20DelegatorB)),.5 * 1e18);
     }
 
     function run() public {
         uint256 deployerPrivateKey = vm.envUint("SCRIPT_PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
-
+        console.log('admin',address(this));
         preDeploy();
         deployUnitroller();
         deployComptroller();

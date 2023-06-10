@@ -4,21 +4,28 @@ import { Comptroller } from "compound-protocol/contracts/Comptroller.sol";
 
 contract CERC20Test is MyScript {
     address user1;
-    uint tokenADecimals; 
+    address user2;
+    address admin;
+    uint256 deployerPrivateKey = vm.envUint("SCRIPT_PRIVATE_KEY");
+
     function setUp() public {
       run();
-      tokenADecimals = 10*10**underlyingTokenA.decimals();
+    
+      admin = vm.addr(deployerPrivateKey);
       user1 = makeAddr("user1");
-      // vm.deal(address(underlyingToken),address(user1), 1 ether);
-     // uint result = cUSDC.mint(100* 10 ** USDC.decimals());
+      user2 = makeAddr("user2");
+
+      vm.startPrank(user2);
+      underlyingTokenA.mint(150*10**underlyingTokenA.decimals());
+      vm.stopPrank();
 
       vm.startPrank(user1);
       underlyingTokenA.mint(100*10**underlyingTokenA.decimals());
       underlyingTokenB.mint(1*10**underlyingTokenB.decimals());
       
       address[] memory cTokens = new address[](2);
-      cTokens[0] = address(cErc20DelegatorA);
-      cTokens[1] = address(cErc20DelegatorB);
+      cTokens[0] = address(cErc20DelegatorB);
+      // cTokens[1] = address(cErc20DelegatorB);
       (uint[] memory value) = uniTrollerProxy.enterMarkets(cTokens);
 
       vm.stopPrank();
@@ -37,17 +44,32 @@ contract CERC20Test is MyScript {
     
     
     function test_borrow_and_repay() public {
-      vm.startPrank(user1);
-      underlyingTokenB.approve(address(cErc20DelegatorB), 1*10**underlyingTokenB.decimals());
+      vm.startPrank(user2);
       underlyingTokenA.approve(address(cErc20DelegatorA), 150*10**underlyingTokenA.decimals());
-      cErc20DelegatorB.mint(1*10 ** underlyingTokenB.decimals());
       cErc20DelegatorA.mint(100*10 ** underlyingTokenA.decimals());
+      vm.stopPrank();
+
+      vm.startPrank(user1);
+      // 抵押一顆 tokenB
+      underlyingTokenB.approve(address(cErc20DelegatorB), 1*10**underlyingTokenB.decimals());
+      cErc20DelegatorB.mint(1*10 ** underlyingTokenB.decimals());
     
       cErc20DelegatorA.borrow(50 * 10**underlyingTokenA.decimals());
       (,,uint accountBorrow,) = cErc20DelegatorA.getAccountSnapshot(address(user1));
       console.log('accountBorrow',accountBorrow);
-      cErc20DelegatorA.repayBorrow(50 * 10**underlyingTokenA.decimals());
-      (,,uint accountBorrowAfter,) = cErc20DelegatorA.getAccountSnapshot(address(user1));
-      console.log('accountBorrow After repay',accountBorrowAfter);
+      // user1 還款
+      // cErc20DelegatorA.repayBorrow(50 * 10**underlyingTokenA.decimals());
+      // (,,uint accountBorrowAfter,) = cErc20DelegatorA.getAccountSnapshot(address(user1));
+      // console.log('accountBorrow After repay',accountBorrowAfter);
+      vm.stopPrank();
+      
+      vm.startPrank(admin);
+      uniTrollerProxy._setCollateralFactor(CToken(address(cErc20DelegatorB)),.4 * 1e18);
+      vm.stopPrank();
+
+      vm.startPrank(user2);
+      cErc20DelegatorA.liquidateBorrow(user1,22*10**underlyingTokenA.decimals(),cErc20DelegatorB);
+      vm.stopPrank();
+
     }
 }
