@@ -74,14 +74,28 @@ contract MyScript is Script {
             Comptroller(address(unitroller)),
             InterestRateModel(rateModel),
             1e18,
-            "cToken",
-            "cToken",
+            "cToken A",
+            "cTokenA",
             18,
             payable(address(this)),
             address(cErc20delegateA),
             "0x0"
         );
+        cErc20DelegatorB = new CErc20Delegator(
+            address(underlyingTokenB),
+            Comptroller(address(unitroller)),
+            InterestRateModel(rateModel),
+            1e18,
+            "cToken B",
+            "cTokenB",
+            18,
+            payable(address(this)),
+            address(cErc20delegateB),
+            "0x0"
+        );
+
         console.log('delegatorA', address(cErc20DelegatorA));
+        console.log('delegatorB', address(cErc20DelegatorB));
     }
 
     function deployUnitroller() public {
@@ -98,12 +112,16 @@ contract MyScript is Script {
     function postDeploy () public {
         
         SimplePriceOracle simpleOracle = new SimplePriceOracle(); 
+
         uniTrollerProxy._setPriceOracle(simpleOracle);
         simpleOracle.setUnderlyingPrice(CToken(address(cErc20DelegatorA)), 1e18);
+        simpleOracle.setUnderlyingPrice(CToken(address(cErc20DelegatorB)), 100e18);
 
         uniTrollerProxy._setLiquidationIncentive(1e18);
         uniTrollerProxy._supportMarket(CToken(address(cErc20DelegatorA)));
+        uniTrollerProxy._supportMarket(CToken(address(cErc20DelegatorB)));
         uniTrollerProxy._setCloseFactor(.051 * 1e18);
+        uniTrollerProxy._setCollateralFactor(CToken(address(cErc20DelegatorB)),.5 * 1e18);
     }
 
     function run() public {
