@@ -57,19 +57,28 @@ contract CERC20Test is MyScript {
       cErc20DelegatorA.borrow(50 * 10**underlyingTokenA.decimals());
       (,,uint accountBorrow,) = cErc20DelegatorA.getAccountSnapshot(address(user1));
       console.log('accountBorrow',accountBorrow);
-      // user1 還款
+      // Case: user1 還款
       // cErc20DelegatorA.repayBorrow(50 * 10**underlyingTokenA.decimals());
       // (,,uint accountBorrowAfter,) = cErc20DelegatorA.getAccountSnapshot(address(user1));
       // console.log('accountBorrow After repay',accountBorrowAfter);
       vm.stopPrank();
       
+      // Case: 調整 collateral factor 導致清算
+      // vm.startPrank(admin);
+      // uniTrollerProxy._setCollateralFactor(CToken(address(cErc20DelegatorB)),.4 * 1e18);
+      // vm.stopPrank();
+      //
+      // vm.startPrank(user2);
+      // cErc20DelegatorA.liquidateBorrow(user1,25*10**underlyingTokenA.decimals(),cErc20DelegatorB);
+      // vm.stopPrank();
+
+      // Case: 調整 underlying price 導致清算
       vm.startPrank(admin);
-      uniTrollerProxy._setCollateralFactor(CToken(address(cErc20DelegatorB)),.4 * 1e18);
+      simpleOracle.setUnderlyingPrice(CToken(address(cErc20DelegatorB)), 49e18);
       vm.stopPrank();
 
       vm.startPrank(user2);
-      cErc20DelegatorA.liquidateBorrow(user1,22*10**underlyingTokenA.decimals(),cErc20DelegatorB);
+      cErc20DelegatorA.liquidateBorrow(user1,25*10**underlyingTokenA.decimals(),cErc20DelegatorB);
       vm.stopPrank();
-
     }
 }

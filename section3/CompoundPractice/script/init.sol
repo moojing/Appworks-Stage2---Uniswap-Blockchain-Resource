@@ -44,6 +44,7 @@ contract MyScript is Script {
     CErc20Delegator cErc20DelegatorB;
     CErc20Delegate cErc20delegateB;
     UnderlyingTokenB underlyingTokenB;
+    SimplePriceOracle simpleOracle;
 
     function preDeploy() public {
         comptroller = new Comptroller();
@@ -111,7 +112,7 @@ contract MyScript is Script {
 
     function postDeploy () public {
         
-        SimplePriceOracle simpleOracle = new SimplePriceOracle(); 
+        simpleOracle = new SimplePriceOracle(); 
 
         uniTrollerProxy._setPriceOracle(simpleOracle);
         simpleOracle.setUnderlyingPrice(CToken(address(cErc20DelegatorA)), 1e18);
