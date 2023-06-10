@@ -23,20 +23,36 @@ contract UnderlyingToken is ERC20 {
     }
 }
 
+contract UnderlyingTokenA is UnderlyingToken {
+    constructor() UnderlyingToken("underlying token A", "UDT-A") {}
+}
+
+contract UnderlyingTokenB is UnderlyingToken {
+    constructor() UnderlyingToken("underlying token B", "UDT-B") {}
+}
+
 contract MyScript is Script {
     Comptroller comptroller;
-    CErc20Delegator delegator;
-    CErc20Delegate cErc20delegate;
-    UnderlyingToken underlyingToken;
+    Comptroller uniTrollerProxy;   
     WhitePaperInterestRateModel rateModel;
     Unitroller unitroller;
-    Comptroller uniTrollerProxy;   
     
+    CErc20Delegator cErc20DelegatorA;
+    CErc20Delegate cErc20delegateA;
+    UnderlyingTokenA underlyingTokenA;
+   
+    CErc20Delegator cErc20DelegatorB;
+    CErc20Delegate cErc20delegateB;
+    UnderlyingTokenB underlyingTokenB;
+
     function preDeploy() public {
         comptroller = new Comptroller();
-        underlyingToken = new UnderlyingToken("underLying token", "UDT");
         rateModel = new WhitePaperInterestRateModel(0,0);
-        cErc20delegate = new CErc20Delegate();
+
+        underlyingTokenA = new UnderlyingTokenA();
+        underlyingTokenB = new UnderlyingTokenB();
+        cErc20delegateA = new CErc20Delegate();
+        cErc20delegateB = new CErc20Delegate();
     } 
 
     function deployComptroller() public {
@@ -53,9 +69,8 @@ contract MyScript is Script {
         //     uint8 decimals_,
         //     address payable admin_,
         //     address implementation_ ) 
-        delegator = new CErc20Delegator(
-            address(underlyingToken),
-            // ????
+        cErc20DelegatorA = new CErc20Delegator(
+            address(underlyingTokenA),
             Comptroller(address(unitroller)),
             InterestRateModel(rateModel),
             1e18,
@@ -63,10 +78,10 @@ contract MyScript is Script {
             "cToken",
             18,
             payable(address(this)),
-            address(cErc20delegate),
+            address(cErc20delegateA),
             "0x0"
         );
-        console.log('delegator', address(delegator));
+        console.log('delegatorA', address(cErc20DelegatorA));
     }
 
     function deployUnitroller() public {
@@ -83,11 +98,12 @@ contract MyScript is Script {
     function postDeploy () public {
         
         SimplePriceOracle simpleOracle = new SimplePriceOracle(); 
-        uniTrollerProxy._setLiquidationIncentive(1e18);
-        uniTrollerProxy._supportMarket(CToken(address(delegator)));
-        uniTrollerProxy._setCloseFactor(.051 * 1e18);
         uniTrollerProxy._setPriceOracle(simpleOracle);
-        simpleOracle.setUnderlyingPrice(CToken(address(delegator)), 1e18);
+        simpleOracle.setUnderlyingPrice(CToken(address(cErc20DelegatorA)), 1e18);
+
+        uniTrollerProxy._setLiquidationIncentive(1e18);
+        uniTrollerProxy._supportMarket(CToken(address(cErc20DelegatorA)));
+        uniTrollerProxy._setCloseFactor(.051 * 1e18);
     }
 
     function run() public {
