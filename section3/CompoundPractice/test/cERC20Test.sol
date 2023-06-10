@@ -27,8 +27,9 @@ contract CERC20Test is MyScript {
       underlyingToken.approve(address(delegator), 10*10**underlyingToken.decimals());
       delegator.mint(10*10 ** underlyingToken.decimals());
       console.log('underlyingToken decimals', underlyingToken.decimals());
-      console.log('underlyingToken balance', underlyingToken.balanceOf(address(user1)));
-      // delegator.reedem(10*10 ** underlyingToken.decimals());
+      console.log('cToken balance before redeem', delegator.balanceOf(address(user1)));
+      delegator.redeem(10*10 ** delegator.decimals());
+      console.log('cToken balance after redeem', delegator.balanceOf(address(user1)));
     }
 
     
