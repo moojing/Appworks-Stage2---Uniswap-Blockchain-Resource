@@ -6,14 +6,21 @@ contract CERC20Test is MyScript {
     address user1;
     address user2;
     address admin;
-    uint256 deployerPrivateKey = vm.envUint("SCRIPT_PRIVATE_KEY");
-
     function setUp() public {
       run();
     
+      console.log('address in CERC20Test', address(this));
+
       admin = vm.addr(deployerPrivateKey);
       user1 = makeAddr("user1");
       user2 = makeAddr("user2");
+      console.log('admin in test',admin);
+
+      vm.startPrank(admin);
+      console.log('admin comp balance', compToken.balanceOf(address(admin)));
+      compToken.transfer(user1, 1000*10**compToken.decimals());     
+      compToken.transfer(user2, 1000*10**compToken.decimals());     
+      vm.stopPrank();
 
       vm.startPrank(user2);
       underlyingTokenA.mint(150*10**underlyingTokenA.decimals());

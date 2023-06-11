@@ -5,6 +5,7 @@ pragma solidity ^0.8.13;
 import "forge-std/Script.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
+import {CompScript} from './comp.sol';
 import { Comptroller } from "compound-protocol/contracts/Comptroller.sol";
 import { WhitePaperInterestRateModel } from "compound-protocol/contracts/WhitePaperInterestRateModel.sol";
 import { CErc20Delegate } from "compound-protocol/contracts/CErc20Delegate.sol";
@@ -13,9 +14,10 @@ import { CErc20Delegator } from "compound-protocol/contracts/CErc20Delegator.sol
 import { Unitroller } from "compound-protocol/contracts/Unitroller.sol";
 import { InterestRateModel } from "compound-protocol/contracts/InterestRateModel.sol";
 import { SimplePriceOracle } from "compound-protocol/contracts/SimplePriceOracle.sol";
-// import { Comp } from "compound-protocol/contracts/Governance/Comp.sol";
+import { Comp } from "compound-protocol/contracts/Governance/Comp.sol";
+import { GovernorBravoDelegator } from "compound-protocol/contracts/Governance/GovernorBravoDelegator.sol";
 
-contract UnderlyingToken is ERC20 {
+contract UnderlyingToken is ERC20{
     constructor(string memory name_, string memory symbol_) ERC20(name_, symbol_) {}
     
     function mint(uint256 amount) public {
@@ -31,7 +33,9 @@ contract UnderlyingTokenB is UnderlyingToken {
     constructor() UnderlyingToken("underlying token B", "UDT-B") {}
 }
 
-contract MyScript is Script {
+contract MyScript is Script{
+    uint256 deployerPrivateKey; 
+    address deployerAddress;
     Comptroller comptroller;
     Comptroller uniTrollerProxy;   
     WhitePaperInterestRateModel rateModel;
@@ -46,20 +50,28 @@ contract MyScript is Script {
     UnderlyingTokenB underlyingTokenB;
     SimplePriceOracle simpleOracle;
 
+    CompScript compScript;
+    Comp compToken;
+    GovernorBravoDelegator bravoDelegator;
+
     function preDeploy() public {
+        //deploy comp related contract
+        compScript = new CompScript(deployerAddress);
+        compToken = compScript.compToken();
+        bravoDelegator = compScript.bravoDelegator();
+
         comptroller = new Comptroller();
         rateModel = new WhitePaperInterestRateModel(0,0);
 
+        // deploy underlying token 
         underlyingTokenA = new UnderlyingTokenA();
         underlyingTokenB = new UnderlyingTokenB();
+        // deploy CErc20Delegate
         cErc20delegateA = new CErc20Delegate();
         cErc20delegateB = new CErc20Delegate();
     } 
 
     function deployComptroller() public {
-        // deploy underlying token 
-        // deploy CErc20Delegate
-        // datectory deploy CErc20Delegator
         // deply CErc20Delegator 
         //(    address underlying_,
         //     ComptrollerInterface comptroller_,
@@ -126,9 +138,11 @@ contract MyScript is Script {
     }
 
     function run() public {
-        uint256 deployerPrivateKey = vm.envUint("SCRIPT_PRIVATE_KEY");
+        deployerPrivateKey =  vm.envUint("SCRIPT_PRIVATE_KEY");
+        deployerAddress = vm.addr(deployerPrivateKey);
+
         vm.startBroadcast(deployerPrivateKey);
-        console.log('admin',address(this));
+
         preDeploy();
         deployUnitroller();
         deployComptroller();
