@@ -18,8 +18,8 @@ contract CERC20Test is MyScript {
 
       vm.startPrank(admin);
       console.log('admin comp balance', compToken.balanceOf(address(admin)));
-      compToken.transfer(user1, 1000*10**compToken.decimals());     
-      compToken.transfer(user2, 1000*10**compToken.decimals());     
+      compToken.transfer(user1, 600*10**compToken.decimals());     
+      compToken.transfer(user2, 600*10**compToken.decimals());     
       vm.stopPrank();
 
       vm.startPrank(user2);
@@ -87,5 +87,14 @@ contract CERC20Test is MyScript {
       vm.startPrank(user2);
       cErc20DelegatorA.liquidateBorrow(user1,25*10**underlyingTokenA.decimals(),cErc20DelegatorB);
       vm.stopPrank();
+    }
+
+    function test_comp_vote() public {
+      vm.startPrank(user1);
+      compToken.delegate(address(user2));
+      vm.stopPrank();
+      uint vote = compToken.getCurrentVotes(address(user2));
+      console.log('vote user2 ',vote);
+      compToken.approve(address(uniTrollerProxy), 1000*10**compToken.decimals());
     }
 }

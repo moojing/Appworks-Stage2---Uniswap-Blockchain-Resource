@@ -1,15 +1,16 @@
 import "forge-std/Script.sol";
 import { Comp } from "compound-protocol/contracts/Governance/Comp.sol";
-import { Timelock } from "compound-protocol/contracts/Timelock.sol";
+// import { Timelock } from "compound-protocol/contracts/Timelock.sol";
+import { Timelock } from '../contract/TimeLockCustom.sol';
+import { GovernorBravoDelegate } from '../contract/BravoDelegateCustom.sol';
 import { GovernorBravoDelegator } from "compound-protocol/contracts/Governance/GovernorBravoDelegator.sol";
-import { GovernorBravoDelegate } from "compound-protocol/contracts/Governance/GovernorBravoDelegate.sol";
 
 contract CompScript {
   address deployerAddress;
   Timelock timelock;
-  Comp compToken;
+  Comp public  compToken;
   GovernorBravoDelegate bravoDelegate;
-  GovernorBravoDelegator bravoDelegator;
+  GovernorBravoDelegator public bravoDelegator;
  
 
   function deploy () public {
@@ -18,7 +19,7 @@ contract CompScript {
   constructor(address admin) public {
        deployerAddress = admin;
        compToken = new Comp(deployerAddress);
-       timelock = new Timelock(deployerAddress, 60 seconds);
+       timelock = new Timelock(deployerAddress, 120 seconds);
        bravoDelegate = new GovernorBravoDelegate();
        //  	 constructor(
 	     // address timelock_,
@@ -29,13 +30,13 @@ contract CompScript {
        //   uint votingDelay_,
        //    uint proposalThreshold_) 
       bravoDelegator = new GovernorBravoDelegator(
-        timelock,
+        address(timelock),
         address(compToken),
         deployerAddress,
         address(bravoDelegate),
         300,
         60,
-        500e18
+        1000e18
       );
   }
 }
