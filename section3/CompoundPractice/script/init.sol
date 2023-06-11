@@ -15,7 +15,9 @@ import { Unitroller } from "compound-protocol/contracts/Unitroller.sol";
 import { InterestRateModel } from "compound-protocol/contracts/InterestRateModel.sol";
 import { SimplePriceOracle } from "compound-protocol/contracts/SimplePriceOracle.sol";
 import { Comp } from "compound-protocol/contracts/Governance/Comp.sol";
+import { GovernorBravoDelegate } from '../contract/BravoDelegateCustom.sol';
 import { GovernorBravoDelegator } from "compound-protocol/contracts/Governance/GovernorBravoDelegator.sol";
+import { GovernorAlpha } from "compound-protocol/contracts/Governance/GovernorAlpha.sol";
 
 contract UnderlyingToken is ERC20{
     constructor(string memory name_, string memory symbol_) ERC20(name_, symbol_) {}
@@ -53,12 +55,15 @@ contract MyScript is Script{
     CompScript compScript;
     Comp compToken;
     GovernorBravoDelegator bravoDelegator;
+    GovernorAlpha alpha;
 
     function preDeploy() public {
         //deploy comp related contract
         compScript = new CompScript(deployerAddress);
+
         compToken = compScript.compToken();
         bravoDelegator = compScript.bravoDelegator();
+        alpha = compScript.alpha();
 
         comptroller = new Comptroller();
         rateModel = new WhitePaperInterestRateModel(0,0);

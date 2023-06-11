@@ -1,6 +1,7 @@
 import "forge-std/console.sol";
 import "../script/init.sol";
 import { Comptroller } from "compound-protocol/contracts/Comptroller.sol";
+import { GovernorBravoDelegate } from '../contract/BravoDelegateCustom.sol';
 
 contract CERC20Test is MyScript {
     address user1;
@@ -20,6 +21,12 @@ contract CERC20Test is MyScript {
       console.log('admin comp balance', compToken.balanceOf(address(admin)));
       compToken.transfer(user1, 600*10**compToken.decimals());     
       compToken.transfer(user2, 600*10**compToken.decimals());     
+      // 這行不會過，要先 發交易執行 executeTransaction 來設定 pending admin
+      // GovernorBravoDelegate(address(bravoDelegator))._initiate(address(alpha)); 
+      
+      console.log('user1 comp balance', compToken.balanceOf(address(user1)));
+      console.log('user2 comp balance', compToken.balanceOf(address(user2)));
+      
       vm.stopPrank();
 
       vm.startPrank(user2);
@@ -90,11 +97,37 @@ contract CERC20Test is MyScript {
     }
 
     function test_comp_vote() public {
+      // delegate 給 user2
       vm.startPrank(user1);
       compToken.delegate(address(user2));
       vm.stopPrank();
-      uint vote = compToken.getCurrentVotes(address(user2));
-      console.log('vote user2 ',vote);
-      compToken.approve(address(uniTrollerProxy), 1000*10**compToken.decimals());
+      
+      //沒有做完，沒辦法正常發 propose ，TimeLock需要一些設定
+      vm.startPrank(user2);
+        compToken.delegate(address(user2));
+        address[] memory tos = new address[](1);
+        uint[] memory values = new uint[](1);
+        string[] memory sigs = new string[](1);
+        bytes[] memory calldatas = new bytes[](1);
+
+        tos[0] = address(uniTrollerProxy);
+        values[0] = 0;
+        sigs[0] = "_setLiquidationIncentive(uint256)";
+        calldatas[0] = abi.encode(7*10**17);
+
+        // console.logBytes(abi.encode(7*10**17));
+        // 需要先 initiate        
+        // GovernorBravoDelegate(address(bravoDelegator)).propose( 
+        //            tos, 
+        //            values, 
+        //            sigs, 
+        //            calldatas, 
+        //            "liquidation incentive proposal");             
+      vm.stopPrank();
+
+      // uint vote1 = compToken.getCurrentVotes(address(user1));
+      // uint vote2 = compToken.getCurrentVotes(address(user2));
+      // console.log('vote user1 ',vote1);
+      // console.log('vote user2 ',vote2);
     }
 }
