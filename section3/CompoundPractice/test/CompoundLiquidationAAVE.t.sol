@@ -1,8 +1,9 @@
 import "forge-std/console.sol";
 import "../src/CERC20Setup.sol";
 import {Test} from "forge-std/Test.sol";
+import {CToken} from "compound-protocol/contracts/CToken.sol";
 
-// import {IFlashLoanSimpleReceiver, IPoolAddressesProvider, IPool} from "aave-v3-core/contracts/flashloan/interfaces/IFlashLoanSimpleReceiver.sol";
+import {IFlashLoanSimpleReceiver, IPoolAddressesProvider, IPool} from "aave-v3-core/contracts/flashloan/interfaces/IFlashLoanSimpleReceiver.sol";
 
 contract CompoundLiquidationAAVE is CERC20Setup, Test {
     address user1;
@@ -15,6 +16,8 @@ contract CompoundLiquidationAAVE is CERC20Setup, Test {
         0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984;
     address public constant USDCAddress =
         0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address constant POOL_ADDRESSES_PROVIDER =
+        0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e;
     string constant MAINNET_RPC_URL = "https://eth.llamarpc.com";
 
     function setUp() public {
@@ -39,9 +42,10 @@ contract CompoundLiquidationAAVE is CERC20Setup, Test {
         vm.startPrank(user1);
         UNI.approve(address(CErc20DelegatorUNI), 1000 * 10 ** UNIDecmials);
         CErc20DelegatorUNI.mint(1000 * 10 ** UNIDecmials);
+        //
         address[] memory cTokens = new address[](2);
         cTokens[0] = address(CErc20DelegatorUNI);
-        cTokens[1] = address(CErc20DelegatorUSDC);
+        // cTokens[1] = address(CErc20DelegatorUSDC);
         uint[] memory value = uniTrollerProxy.enterMarkets(cTokens);
         // (, uint accountToken, , ) = CErc20DelegatorUNI.getAccountSnapshot(
         //     address(user1)
@@ -51,6 +55,14 @@ contract CompoundLiquidationAAVE is CERC20Setup, Test {
         vm.stopPrank();
     }
 
+    function ADDRESSES_PROVIDER() public view returns (IPoolAddressesProvider) {
+        return IPoolAddressesProvider(POOL_ADDRESSES_PROVIDER);
+    }
+
+    function POOL() public view returns (IPool) {
+        return IPool(ADDRESSES_PROVIDER().getPool());
+    }
+
     function executeOperation(
         address assets,
         uint256 amounts,
@@ -58,12 +70,62 @@ contract CompoundLiquidationAAVE is CERC20Setup, Test {
         address initiator,
         bytes calldata params
     ) external returns (bool) {
-        // address checkerAddress = abi.decode(params, (address));
-        // BalanceChecker checker = BalanceChecker(checkerAddress);
-        // checker.checkBalance();
-        // IERC20(USDC).approve(address(POOL()), premiums + amounts);
+        console.log(
+            "USDC.balanceOf(address(this));",
+            USDC.balanceOf(address(this))
+        );
+        // liquidate USDC for cUNI
+        USDC.approve(address(CErc20DelegatorUSDC), 1250 * 10 ** USDCDecimals);
+        CErc20DelegatorUSDC.liquidateBorrow(
+            user1,
+            1250 * 10 ** USDCDecimals,
+            CErc20DelegatorUNI
+        );
+        // redeem for UNI
+        CErc20DelegatorUNI.redeem(CErc20DelegatorUNI.balanceOf(address(this)));
+        console.log(
+            "UNI.balanceOf(address(this));",
+            UNI.balanceOf(address(this))
+        );
+
+        console.log(
+            "CErc20DelegatorUNI.balanceOf(address(this));",
+            CErc20DelegatorUNI.balanceOf(address(this))
+        );
+
+        // swap UNI for USDC
+        ISwapRouter.ExactInputSingleParams memory swapParams = ISwapRouter
+            .ExactInputSingleParams({
+                tokenIn: UNIAddress,
+                tokenOut: USDCAddress,
+                fee: 3000, // 0.3%
+                recipient: address(this),
+                deadline: block.timestamp,
+                amountIn: UNI.balanceOf(address(this)),
+                amountOutMinimum: 0,
+                sqrtPriceLimitX96: 0
+            });
+
+        // The call to `exactInputSingle` executes the swap.
+        // swap Router = 0xE592427A0AEce92De3Edee1F18E0157C05861564
+        uint256 amountOut = swapRouter.exactInputSingle(swapParams);
+
+        IERC20(USDC).approve(address(POOL()), premiums + amounts);
         // return true;
     }
 
-    function test_aave_liquidation() public {}
+    function test_aave_liquidation() public {
+        simpleOracle.setUnderlyingPrice(
+            CToken(address(CErc20DelegatorUNI)),
+            4 * 1e18
+        );
+
+        POOL().flashLoanSimple(
+            address(this),
+            address(USDC),
+            2500 * 10 ** 6,
+            abi.encode(address(this)),
+            0
+        );
+    }
 }
