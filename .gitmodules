@@ -55,3 +55,6 @@
 [submodule "section3/FlashLoanPractice/lib/v2-periphery"]
 	path = section3/FlashLoanPractice/lib/v2-periphery
 	url = https://github.com/uniswap/v2-periphery
+[submodule "section3/CompoundPractice/lib/aave-v3-core"]
+	path = section3/CompoundPractice/lib/aave-v3-core
+	url = https://github.com/aave/aave-v3-core
